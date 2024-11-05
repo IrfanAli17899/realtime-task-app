@@ -1,50 +1,42 @@
 import db from "@/models"
-import NextAuth, { CredentialsSignin } from "next-auth"
+import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
-import Credentials from "next-auth/providers/credentials"
-import { saltAndHashPassword } from "@/utils/auth-utils"
-import bcrypt from "bcryptjs";
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { JWT } from "next-auth/jwt"
+import { User } from "@prisma/client"
 
-class InvalidLoginError extends CredentialsSignin {
-  code = "Invalid identifier or password"
+declare module "next-auth" {
+  interface Session {
+    user?: User
+  }
 }
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+// Extend the JWT type
+declare module "next-auth/jwt" {
+  interface JWT {
+    user: User
+  }
+}
+
+export const { auth: session, handlers: authHandlers, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  providers: [Google, Credentials({
-    credentials: {
-      email: { type: "email", placeholder: "Email", label: "Email", required: true },
-      password: { type: "password", placeholder: "Password", label: "Password", required: true },
-    },
-    authorize: async (credentials) => {
-      const email = credentials.email as string;
-      const hash = saltAndHashPassword(credentials.password as string);
-
-      let user = await db.user.findUnique({
-        where: {
-          email,
-        },
-      });
-
-      if (!user) {
-        user = await db.user.create({
-          data: {
-            email,
-            hashedPassword: hash,
-          },
-        });
-      } else {
-        const isMatch = bcrypt.compareSync(
-          credentials.password as string,
-          user.hashedPassword as string
-        );
-        if (!isMatch) {
-          throw new InvalidLoginError()
-        }
+  session: { strategy: "jwt" },
+  providers: [Google],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        token.user = user
       }
-
-      return user;
+      return token
     },
-  })],
+    async session({ session, token }) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      session.user = token.user
+      return session
+    },
+  },
 })

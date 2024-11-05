@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Socket } from 'socket.io-client'
 import { getSocket } from '@/libs/socket'
 
-export function useSocket() {
+function useSocket() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
@@ -32,3 +32,5 @@ export function useSocket() {
 
   return { socket, isConnected }
 }
+
+export default useSocket

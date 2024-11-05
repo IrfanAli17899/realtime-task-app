@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useSocket } from "@/hooks/useSocket";
+import { useSocket } from "@/hooks";
 
 interface CursorData {
   userId: string;
