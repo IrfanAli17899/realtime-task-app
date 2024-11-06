@@ -4,9 +4,9 @@ import {
   Tasks,
   updateTaskAction,
 } from "@/actions";
-import { useAppDispatch, useAppSelector } from "@/hooks";
+import { useAppDispatch, useAppSelector, useSocket } from "@/hooks";
 import { addTask, fetchUsers, updateTask } from "@/store";
-import { TaskStatus } from "@prisma/client";
+import {TaskStatus } from "@prisma/client";
 import { Button, Drawer, Form, Input, Select } from "antd";
 import React, {
   RefObject,
@@ -33,6 +33,22 @@ function CreateTaskDrawer({ drawerRef }: CreateTaskDrawerProps) {
   const [form] = Form.useForm();
 
   const [loading, startLoading] = useTransition();
+
+  const { socket, isConnected } = useSocket();
+
+  useEffect(() => {
+    if (socket && isConnected) {
+      const handleCreateTask = (task: Tasks[0]) => dispatch(addTask(task));
+      const handleUpdateTask = (task: Tasks[0]) => dispatch(updateTask(task));
+
+      socket.on("task:created", handleCreateTask);
+      socket.on("task:updated", handleUpdateTask);
+      return () => {
+        socket.off("task:created", handleCreateTask);
+        socket.off("task:updated", handleUpdateTask);
+      };
+    }
+  }, [socket, isConnected]);
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -61,10 +77,10 @@ function CreateTaskDrawer({ drawerRef }: CreateTaskDrawerProps) {
     startLoading(async () => {
       if (editId) {
         const task = await updateTaskAction({ id: editId, ...v });
-        dispatch(updateTask(task));
+        socket?.emit("task:updated", task);
       } else {
         const task = await createTaskAction(v);
-        dispatch(addTask(task));
+        socket?.emit("task:created", task);
       }
       onClose();
     });
@@ -76,9 +92,9 @@ function CreateTaskDrawer({ drawerRef }: CreateTaskDrawerProps) {
         <Form.Item name="title" rules={[{ required: true }]}>
           <Input placeholder="Title" />
         </Form.Item>
-        <Form.Item name="description">
+        {/* <Form.Item name="description">
           <Input.TextArea placeholder="Description" />
-        </Form.Item>
+        </Form.Item> */}
         <Form.Item name="status">
           <Select
             placeholder="Select Status"

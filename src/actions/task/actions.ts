@@ -26,7 +26,11 @@ export const getTaskDetailAction = async (props: GetTaskDetailInput) => {
     return await db.task.findUnique({
         where: {
             id,
-            userId: user.id
+            OR: [{ userId: user.id }, { assignments: { some: { userId: user.id } } }]
+        },
+        include: {
+            user: { select: { id: true, name: true, image: true } },
+            assignments: { include: { user: { select: { id: true, name: true, image: true } } } }
         }
     })
 }

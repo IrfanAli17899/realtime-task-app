@@ -15,7 +15,7 @@ import Link from "next/link";
 import React from "react";
 
 type TasksTableProps = {
-  deleteTask: (id: string) => Promise<void>;
+  deleteTask: (task: Tasks[0]) => Promise<void>;
   editTask: (id: Tasks[0]) => void;
   tasks: Tasks;
   loading: boolean;
@@ -112,7 +112,7 @@ const TASKS_COLUMNS: (props: {
           <Popconfirm
             title="Are you sure?"
             okText="Yes"
-            onConfirm={() => deleteTask(task.id)}
+            onConfirm={() => deleteTask(task)}
           >
             <Button
               size="middle"

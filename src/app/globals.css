@@ -16,10 +16,7 @@ p,h1,h2,h3,h4,h5,h6 {
 }
 
 .editor-container {
-  position: relative;
-  width: 100%;
-  height: 300px;
-  border: 1px solid #ccc;
+  @apply w-full h-full relative flex flex-col
 }
 
 .text-editor {

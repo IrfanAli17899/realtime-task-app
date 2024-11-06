@@ -20,20 +20,78 @@ app.prepare().then(() => {
 
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
-    // Listen for cursor and mouse movements from clients
-    socket.on("cursor-move", (cursorData) => {
-      // Broadcast to other clients (not the sender)
-      socket.broadcast.emit("cursor-move", cursorData);
+    // User Events
+    socket.on("user:join", (userId) => {
+      socket.join(`user:${userId}`);
+      console.log(`User joined: ${userId}`);
+    });
+    // Socket connection handler
+    // Task Events
+    socket.on("task:join", (taskId,userId) => {
+      socket.join(`task:${taskId}`);
+      io.to(`task:${taskId}`).emit(`task:${taskId}:user-join`, userId);
+      console.log(`Joined task room: ${taskId}`);
     });
 
-    socket.on("mouse-move", (mouseData) => {
-      // Broadcast to other clients (not the sender)
-      socket.broadcast.emit("mouse-move", mouseData);
+    socket.on("task:leave", (taskId) => {
+      socket.leave(`task:${taskId}`);
+      io.to(`task:${taskId}`).emit(`task:${taskId}:user-leave`, userId);
+      console.log(`Left task room: ${taskId}`);
     });
 
-    socket.on("content-change", (newText) => {
+    socket.on("task:created", (task) => {
+      console.log(task);
+      [...task.assignments, { userId: task.user.id }].forEach(({ userId }) => {
+        io.to(`user:${userId}`).emit("task:created", task);
+      });
+    });
+
+    socket.on("task:updated", (task) => {
+      // Notify each assignee individually
+      [...task.assignments, { userId: task.user.id }].forEach(({ userId }) => {
+        io.to(`user:${userId}`).emit("task:updated", task);
+      });
+    });
+
+    socket.on("task:deleted", (task) => {
+      // Notify each assignee individually
+      [...task.assignments, { userId: task.user.id }].forEach(({ userId }) => {
+        io.to(`user:${userId}`).emit("task:deleted", task.id);
+      });
+    });
+
+    // Content change events
+    // socket.on("task:content:update", ({ taskId, changes }) => {
+    //   socket.to(`task:${taskId}`).emit("task:content:changed", {
+    //     taskId,
+    //     changes,
+    //   });
+    // });
+
+    // // Listen for cursor and mouse movements from clients
+    socket.on("task:cursor-move", (taskId, cursorData) => {
       // Broadcast to other clients (not the sender)
-      socket.broadcast.emit("content-change", newText);
+      io.to(`task:${taskId}`).emit(`task:${taskId}:cursor-move`, cursorData);
+    });
+
+    socket.on("task:mouse-move", (taskId, mouseData) => {
+      // Broadcast to other clients (not the sender)
+      io.to(`task:${taskId}`).emit(`task:${taskId}:mouse-move`, mouseData);
+    });
+
+    socket.on("task:indicator-update", (taskId, mouseData) => {
+      // Broadcast to other clients (not the sender)
+      io.to(`task:${taskId}`).emit(`task:${taskId}:indicator-update`, mouseData);
+    });
+
+    socket.on("task:operation", (taskId, mouseData) => {
+      // Broadcast to other clients (not the sender)
+      io.to(`task:${taskId}`).emit(`task:${taskId}:operation`, mouseData);
+    });
+
+    socket.on("task:content-change", (taskId, data) => {
+      // Broadcast to other clients (not the sender)
+      io.to(`task:${taskId}`).emit(`task:${taskId}:content-change`, data);
     });
 
     socket.on("disconnect", () => {

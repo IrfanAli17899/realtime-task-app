@@ -7,8 +7,13 @@ import CreateTaskDrawer, {
   CreateTaskDrawerRef,
 } from "./components/create-task-drawer";
 import { fetchUsers, getTasks, removeTask } from "@/store";
-import { deleteTaskAction, Tasks } from "@/actions";
-import { useAppDispatch, useAppSelector, useDebounce } from "@/hooks";
+import { deleteTaskAction, getAuthUser, Tasks } from "@/actions";
+import {
+  useAppDispatch,
+  useAppSelector,
+  useDebounce,
+  useSocket,
+} from "@/hooks";
 import { TaskStatus } from "@prisma/client";
 
 function HomeScreen() {
@@ -22,6 +27,23 @@ function HomeScreen() {
   const loading = useAppSelector((state) => state.tasks.loading);
   const users = useAppSelector((state) => state.users.data);
   const debouncedSearch = useDebounce(search, 500);
+  const { socket, isConnected } = useSocket();
+
+  useEffect(() => {
+    if (socket && isConnected) {
+      joinUserSocket();
+      const handleDeleteTask = (id: string) => dispatch(removeTask(id));
+      socket.on("task:deleted", handleDeleteTask);
+      return () => {
+        socket.off("task:deleted", handleDeleteTask);
+      };
+    }
+  }, [socket, isConnected]);
+
+  const joinUserSocket = async () => {
+    const user = await getAuthUser();
+    socket?.emit("user:join", user.id);
+  };
 
   useEffect(() => {
     dispatch(fetchUsers());
@@ -35,10 +57,9 @@ function HomeScreen() {
     createTaskDrawer.current?.edit(task);
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteTaskAction({ id }).then(() => {
-      dispatch(removeTask(id));
-    });
+  const handleDelete = async (task: Tasks[0]) => {
+    await deleteTaskAction({ id: task.id });
+    socket?.emit("task:deleted", task);
   };
 
   return (
