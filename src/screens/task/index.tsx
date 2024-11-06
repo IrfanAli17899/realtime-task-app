@@ -141,7 +141,7 @@ function TaskScreen({ task }: { task: Tasks[0] }) {
     mouseTimeoutRef.current = setTimeout(updateCursorPosition, MOUSE_TIMEOUT);
   }, THROTTLE_MS);
 
-  const handleInput = useCallback(
+  const handleInputCallback = useCallback(
     (e: React.FormEvent<HTMLDivElement>) => {
       if (
         !socket ||
@@ -179,6 +179,8 @@ function TaskScreen({ task }: { task: Tasks[0] }) {
     },
     [socket, userId, task.id, handleCursor]
   );
+
+  const handleInput = useThrottle(handleInputCallback, THROTTLE_MS);
 
   const handleUserJoin = (userId: string, type: "add" | "delete") => {
     console.log("userId", userId);
